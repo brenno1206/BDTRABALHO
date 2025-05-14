@@ -1,11 +1,34 @@
-
+DROP DATABASE apptarefas;
 SHOW SCHEMAS;
 use appTarefas;
+SET SQL_SAFE_UPDATES = 0;
 
-CALL popularUsuario(10);
+
+
+CALL popularUsuario(1000);
 DROP PROCEDURE popularUsuario;
+SELECT COUNT(*) FROM usuario;
 SELECT * FROM usuario;
 DELETE FROM usuario;
+
+
+
+
+sELECT * from usuario
+WHERE nome = 'Pedro';
+
+alter table usuario 
+ADD INDEX idx_nome(nome);
+
+alter table usuario 
+DROP INDEX idx_nome;
+
+
+
+
+
+alter table usuario 
+ADD UNIQUE INDEX email_UNIQUE(email);
 
 CALL popularTarefa(10);
 DROP PROCEDURE popularTarefa;
@@ -27,75 +50,76 @@ BEGIN
     DECLARE email VARCHAR(255);
     DECLARE cidade VARCHAR(50);
     DECLARE data_nasc DATE;
-    
+    DECLARE id INT;
+
     DECLARE nome_aleatorio INT;
     DECLARE sobrenome_aleatorio INT;
     DECLARE cidade_aleatoria INT;
     DECLARE ano_aleatorio INT;
     DECLARE mes_aleatorio INT;
     DECLARE dia_aleatorio INT;
-    
+
     DECLARE nomes VARCHAR(1000) DEFAULT 'João,Maria,José,Ana,Antônio,Carlos,Paulo,Pedro,Lucas,Luiza,Mariana,Patrícia,Daniel,Marcos,Eduardo';
     DECLARE sobrenomes VARCHAR(1000) DEFAULT 'Silva,Santos,Oliveira,Souza,Rodrigues,Lima,Gomes,Costa,Ribeiro,Martins,Carvalho,Araujo,Pinto';
     DECLARE cidades VARCHAR(1000) DEFAULT 'São Paulo,Rio de Janeiro,Belo Horizonte,Porto Alegre,Curitiba,Salvador,Fortaleza,Virória,São Luís';
-    
+
     DECLARE qtd_nomes INT;
     DECLARE qtd_sobrenomes INT;
     DECLARE qtd_cidades INT;
-    
+
     -- Contar quantos itens tem em cada array
     SET qtd_nomes = (LENGTH(nomes) - LENGTH(REPLACE(nomes, ',', ''))) + 1;
     SET qtd_sobrenomes = (LENGTH(sobrenomes) - LENGTH(REPLACE(sobrenomes, ',', ''))) + 1;
     SET qtd_cidades = (LENGTH(cidades) - LENGTH(REPLACE(cidades, ',', ''))) + 1;
-    
+
     SET i = 0;
     WHILE i < numRows DO
         -- Selecionar itens aleatórios dos arrays
         SET nome_aleatorio = FLOOR(1 + RAND() * (qtd_nomes - 1));
         SET sobrenome_aleatorio = FLOOR(1 + RAND() * (qtd_sobrenomes - 1));
         SET cidade_aleatoria = FLOOR(1 + RAND() * (qtd_cidades - 1));
-        
+
         -- Extrair os valores dos arrays
         SET nome = SUBSTRING_INDEX(SUBSTRING_INDEX(nomes, ',', nome_aleatorio), ',', -1);
         SET sobrenome = SUBSTRING_INDEX(SUBSTRING_INDEX(sobrenomes, ',', sobrenome_aleatorio), ',', -1);
         SET cidade = SUBSTRING_INDEX(SUBSTRING_INDEX(cidades, ',', cidade_aleatoria), ',', -1);
-        
-        -- Criar email baseado no nome e sobrenome
-        SET email = CONCAT(
-            LOWER(REPLACE(nome, ' ', '')), 
-            '.', 
-            LOWER(REPLACE(sobrenome, ' ', '')), 
-            FLOOR(RAND() * 1000), 
-            '@email.com'
-        );
-        
-        -- Gerar data de nascimento totalmente aleatória (entre 18 e 80 anos atrás)
+
+        -- Gerar data de nascimento
         SET ano_aleatorio = YEAR(CURRENT_DATE()) - FLOOR(18 + RAND() * (80 - 18));
         SET mes_aleatorio = FLOOR(1 + RAND() * 12);
-        
-        -- Gerar dia aleatório considerando o mês (evitando 31/02 por exemplo)
+
         IF mes_aleatorio IN (4, 6, 9, 11) THEN
             SET dia_aleatorio = FLOOR(1 + RAND() * 30);
         ELSEIF mes_aleatorio = 2 THEN
-            -- Fevereiro: considera 28 dias (simplificado, sem verificar ano bissexto)
             SET dia_aleatorio = FLOOR(1 + RAND() * 28);
         ELSE
             SET dia_aleatorio = FLOOR(1 + RAND() * 31);
         END IF;
-        
-        -- Construir a data final
+
         SET data_nasc = STR_TO_DATE(CONCAT(ano_aleatorio, '-', mes_aleatorio, '-', dia_aleatorio), '%Y-%m-%d');
-        
-        -- Aqui você insere os dados na tabela (substitua pela sua tabela real)
+
+        -- Inserir com email temporário
         INSERT INTO usuario (nome, sobrenome, email, cidade, dataNasc)
-        VALUES (nome, sobrenome, email, cidade, data_nasc);
-        
+        VALUES (nome, sobrenome, 'temp@email.com', cidade, data_nasc);
+
+        -- Pegar o ID recém-criado
+        SET id = LAST_INSERT_ID();
+
+        -- Gerar o e-mail baseado no id
+        SET email = CONCAT(LOWER(REPLACE(nome, ' ', '')), '.', LOWER(REPLACE(sobrenome, ' ', '')), id, '@email.com');
+
+        -- Atualizar o e-mail
+        UPDATE usuario
+        SET email = email
+        WHERE idUsuario = id;
+
         SET i = i + 1;
     END WHILE;
-    
+
     SELECT CONCAT(numRows, ' registros inseridos com sucesso.') AS resultado;
 END $$
 DELIMITER ;
+
 
 
 DELIMITER $$
